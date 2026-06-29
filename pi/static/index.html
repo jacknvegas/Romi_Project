@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Romi Control</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Romi Control</h1>
+    <div id="connection-status" class="status-badge disconnected">Disconnected</div>
+  </header>
+
+  <main>
+    <section class="panel drive-panel">
+      <h2>Drive</h2>
+      <div class="drive-layout">
+        <div id="joystick" class="joystick" aria-label="Drive joystick">
+          <div id="joystick-knob" class="joystick-knob"></div>
+        </div>
+        <div class="drive-readout">
+          <div>Left: <span id="motor-left">0</span></div>
+          <div>Right: <span id="motor-right">0</span></div>
+        </div>
+      </div>
+      <button id="stop-btn" class="btn btn-warning" type="button">Stop Motors</button>
+    </section>
+
+    <section class="panel arm-panel">
+      <h2>Arm &amp; Gripper</h2>
+      <p class="pin-labels">Servos: A2 (pin 20) · A3 (pin 21) · A4 (pin 22)</p>
+
+      <label class="slider-row">
+        <span>Base (A2)</span>
+        <input id="servo-a2" type="range" min="0" max="180" value="90">
+        <span id="servo-a2-val">90°</span>
+      </label>
+
+      <label class="slider-row">
+        <span>Shoulder (A3)</span>
+        <input id="servo-a3" type="range" min="0" max="180" value="90">
+        <span id="servo-a3-val">90°</span>
+      </label>
+
+      <label class="slider-row">
+        <span>Gripper (A4)</span>
+        <input id="servo-a4" type="range" min="0" max="180" value="45">
+        <span id="servo-a4-val">45°</span>
+      </label>
+
+      <div class="preset-row">
+        <button class="btn btn-secondary preset-btn" data-preset="home" type="button">Home</button>
+        <button class="btn btn-secondary preset-btn" data-preset="reach" type="button">Reach</button>
+        <button class="btn btn-secondary preset-btn" data-preset="grip_open" type="button">Open Grip</button>
+        <button class="btn btn-secondary preset-btn" data-preset="grip_close" type="button">Close Grip</button>
+      </div>
+    </section>
+
+    <section class="panel status-panel">
+      <h2>Status</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="label">Battery</span>
+          <span id="battery">—</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Left Encoder</span>
+          <span id="enc-left">—</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Right Encoder</span>
+          <span id="enc-right">—</span>
+        </div>
+        <div class="status-item">
+          <span class="label">Buttons</span>
+          <span id="buttons">—</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <button id="estop-btn" class="btn btn-danger" type="button">EMERGENCY STOP</button>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
