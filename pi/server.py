@@ -19,7 +19,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from romi_bridge import RomiBridge
+from romi_bridge import I2CNotAvailableError, RomiBridge
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("romi-server")
@@ -32,6 +32,7 @@ romi: RomiBridge | None = None
 last_command_time = 0.0
 current_servos = (90, 90, 45)
 current_motors = (0, 0)
+i2c_unavailable_logged = False
 
 
 def get_romi() -> RomiBridge:
@@ -39,6 +40,16 @@ def get_romi() -> RomiBridge:
     if romi is None:
         romi = RomiBridge()
     return romi
+
+
+def log_i2c_error(exc: OSError, context: str) -> None:
+    global i2c_unavailable_logged
+    if isinstance(exc, I2CNotAvailableError) or "No such file or directory" in str(exc):
+        if not i2c_unavailable_logged:
+            logger.error("%s: %s", context, exc)
+            i2c_unavailable_logged = True
+        return
+    logger.warning("%s: %s", context, exc)
 
 
 async def watchdog_loop() -> None:
@@ -50,11 +61,17 @@ async def watchdog_loop() -> None:
             try:
                 get_romi().stop_motors()
             except OSError as exc:
-                logger.warning("Watchdog I2C error: %s", exc)
+                log_i2c_error(exc, "Watchdog I2C error")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        get_romi()
+        logger.info("I2C connected on /dev/i2c-%s", romi.bus_number)
+    except I2CNotAvailableError as exc:
+        logger.error("%s", exc)
+
     task = asyncio.create_task(watchdog_loop())
     yield
     task.cancel()

@@ -10,11 +10,13 @@ from __future__ import annotations
 import struct
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import smbus2 as smbus
 
 I2C_ADDRESS = 20
 I2C_DELAY_S = 0.0001
+DEFAULT_BUS_NUMBER = 1
 
 # Buffer offsets (bytes)
 OFFSET_LEDS = 0
@@ -38,10 +40,53 @@ class RomiStatus:
     servos: tuple[int, int, int]
 
 
+class I2CNotAvailableError(OSError):
+    """Raised when the Raspberry Pi I2C interface is disabled or missing."""
+
+
+def find_i2c_bus(preferred: int = DEFAULT_BUS_NUMBER) -> int:
+    """Return an available I2C bus number, preferring the Romi HAT bus."""
+    preferred_path = Path(f"/dev/i2c-{preferred}")
+    if preferred_path.exists():
+        return preferred
+
+    buses = sorted(
+        int(path.name.split("-", 1)[1])
+        for path in Path("/dev").glob("i2c-*")
+        if path.name.split("-", 1)[1].isdigit()
+    )
+    if not buses:
+        raise I2CNotAvailableError(
+            f"I2C is not enabled: /dev/i2c-{preferred} does not exist and no /dev/i2c-* "
+            "devices were found. Enable I2C on the Raspberry Pi (sudo raspi-config → "
+            "Interface Options → I2C → Enable), then reboot the Pi."
+        )
+    return buses[0]
+
+
+def i2c_setup_help(bus_number: int = DEFAULT_BUS_NUMBER) -> str:
+    return (
+        f"I2C bus /dev/i2c-{bus_number} is not available.\n"
+        "On Raspberry Pi OS:\n"
+        "  1. Run: sudo raspi-config\n"
+        "  2. Interface Options → I2C → Enable\n"
+        "  3. Reboot the Pi: sudo reboot\n"
+        "  4. Verify: ls /dev/i2c*   and   sudo i2cdetect -y 1\n"
+        "On Pi 5, also confirm /boot/firmware/config.txt contains: dtparam=i2c_arm=on\n"
+        "Powering up the Romi 32U4 after the Pi is fine; only the Pi needs I2C enabled."
+    )
+
+
 class RomiBridge:
     """Communicates with Romi 32U4 firmware over I2C."""
 
-    def __init__(self, bus_number: int = 1, address: int = I2C_ADDRESS) -> None:
+    def __init__(self, bus_number: int | None = None, address: int = I2C_ADDRESS) -> None:
+        if bus_number is None:
+            bus_number = find_i2c_bus()
+        bus_path = Path(f"/dev/i2c-{bus_number}")
+        if not bus_path.exists():
+            raise I2CNotAvailableError(i2c_setup_help(bus_number))
+        self.bus_number = bus_number
         self.bus = smbus.SMBus(bus_number)
         self.address = address
 

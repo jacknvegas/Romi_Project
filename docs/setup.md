@@ -40,10 +40,40 @@ See [Pololu servo documentation](https://www.pololu.com/docs/0J69/3.9.1) for det
 
 ### Enable I2C
 
+I2C must be enabled on the Raspberry Pi before `server.py` can talk to the Romi.
+If you see `No such file or directory: '/dev/i2c-1'`, I2C is disabled — this is **not**
+caused by Romi power-up order.
+
 ```bash
 sudo raspi-config
 # Interface Options → I2C → Enable
+sudo reboot
 ```
+
+After reboot, verify:
+
+```bash
+ls /dev/i2c*
+# Expect: /dev/i2c-1
+
+sudo i2cdetect -y 1
+# Expect device 20 (Romi 32U4) and 6b (onboard IMU)
+```
+
+On **Raspberry Pi 5**, confirm `/boot/firmware/config.txt` contains:
+
+```
+dtparam=i2c_arm=on
+```
+
+If `/dev/i2c-1` is still missing after reboot, load the userspace module:
+
+```bash
+sudo modprobe i2c-dev
+```
+
+You only need to **reboot the Raspberry Pi** after enabling I2C. You do not need to
+reboot the Romi 32U4 or power everything down in a specific order.
 
 Optional: increase I2C speed to 400 kHz in `/boot/firmware/config.txt`:
 
@@ -136,7 +166,7 @@ status = romi.read_status()
 
 | Problem | Solution |
 |---------|----------|
-| No device at I2C address 20 | Re-upload firmware; check Pi is seated on Romi HAT connector |
+| No `/dev/i2c-1` on Pi | Enable I2C in raspi-config, reboot Pi, run `ls /dev/i2c*` |
 | Servos jitter or motors stop | Confirm Servo library uses Timer3 |
 | iPad cannot connect | Verify same WiFi network; check firewall allows port 8000 |
 | Motors run after disconnect | Watchdog stops motors after 500 ms; E-Stop also available |
